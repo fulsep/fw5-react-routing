@@ -1,10 +1,13 @@
 import React, {useState, useEffect} from 'react'
 import Layout from '../components/Layout'
 import {default as axios} from 'axios'
+import { connect, useSelector } from 'react-redux'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import qs from 'qs'
+import { getCharacter, filterCharacter } from '../redux/actions/character'
+import Skeleton from 'react-loading-skeleton'
 
-export const CharacterList = () => {
+export const CharacterList = ({getCharacter, filterCharacter}) => {
+    const {character: char} = useSelector(state => state)
     const [character, setCharacter] = useState([])
     const [page, setPage] = useState({})
     const [errorMsg, setErrorMsg] = useState(null)
@@ -26,11 +29,11 @@ export const CharacterList = () => {
         }
     },[])
 
-    const getCharacter = async ()=> {
-        const {data} = await axios.get('https://rickandmortyapi.com/api/character')
-        setCharacter(data.results)
-        setPage(data.info)
-    }
+    // const getCharacter = async ()=> {
+    //     const {data} = await axios.get('https://rickandmortyapi.com/api/character')
+    //     setCharacter(data.results)
+    //     setPage(data.info)
+    // }
 
     const getNextData = async (url, replace = false) => {
         try{
@@ -57,11 +60,10 @@ export const CharacterList = () => {
     }
     const onSearch = async(event)=>{
         event.preventDefault();
-        const url = (name,gender)=> `https://rickandmortyapi.com/api/character?name=${name}&gender=${gender}`
         const name = event.target.elements["search"].value
         const gender = event.target.elements["gender"].value
         setSearchParams({name,gender})
-        await getNextData(url(name, gender), true)
+        filterCharacter(name,gender)
     }
 
     const goToDetail = (id)=> {
@@ -95,8 +97,11 @@ export const CharacterList = () => {
                     </div>
                 </div>
                 }
-                <div className='row my-5'>
-                    {character.map((data, idx)=>{
+                {char.isLoading&&
+                    <Skeleton height={150} containerClassName='row' count={8} wrapper={({children})=>(<div className='col-md-3'>{children}</div>)} />
+                }
+                {!char.isLoading && <div className='row my-5'>
+                    {char.character.map((data, idx)=>{
                         return(
                             <div onClick={()=>goToDetail(data.id)} style={{cursor: 'pointer'}} key={String(data.id)} className='col-md-3'>
                                 <div className='position-relative mb-2'>
@@ -106,7 +111,7 @@ export const CharacterList = () => {
                             </div>
                         )
                     })}
-                </div>
+                </div>}
                 {page.next!==null&&
                     <div className='row my-5'>
                         <div className='col-md-12 text-center'>
@@ -119,4 +124,8 @@ export const CharacterList = () => {
     )
 }
 
-export default CharacterList
+const mapStateToProps = state => ({character: state.character})
+
+const mapDispatchToProps = {getCharacter, filterCharacter}
+
+export default connect(mapStateToProps, mapDispatchToProps)(CharacterList)
